@@ -53,3 +53,8 @@ export const upsertRendement = (data) => request('/rendement', { method: 'POST',
 export const getJaaropgave = () => request('/jaaropgave')
 export const getJaaropgaveJaar = (jaar) => request(`/jaaropgave/${jaar}`)
 export const upsertJaaropgave = (data) => request('/jaaropgave', { method: 'POST', body: JSON.stringify(data) })
+
+// Data beheer
+export const exportData = () => fetch('/api/export').then(r => r.json())
+export const deleteHistorie = () => request('/data/historie', { method: 'DELETE' })
+export const deleteAlles = () => request('/data/alles', { method: 'DELETE' })

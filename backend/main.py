@@ -316,3 +316,51 @@ def upsert_jaaropgave(opgave: JaaropgaveCreate, session: Session = Depends(get_s
     session.commit()
     session.refresh(db_opgave)
     return db_opgave
+
+
+# --- Instellingen / Data beheer ---
+
+@app.get("/api/export")
+def export_all(session: Session = Depends(get_session)):
+    """Exporteer alle data als JSON."""
+    accounts = session.exec(select(Account)).all()
+    histories = session.exec(select(SaldoHistorie)).all()
+    schulden = session.exec(select(Schuld)).all()
+    rendement = session.exec(select(RendementJaren)).all()
+    jaaropgave = session.exec(select(Jaaropgave)).all()
+    return {
+        "accounts": [a.model_dump() for a in accounts],
+        "saldo_historie": [h.model_dump() for h in histories],
+        "schulden": [s.model_dump() for s in schulden],
+        "rendement_jaren": [r.model_dump() for r in rendement],
+        "jaaropgave": [j.model_dump() for j in jaaropgave],
+    }
+
+
+@app.delete("/api/data/historie")
+def delete_all_historie(session: Session = Depends(get_session)):
+    """Verwijder alle historische saldo-data."""
+    records = session.exec(select(SaldoHistorie)).all()
+    for r in records:
+        session.delete(r)
+    session.commit()
+    return {"verwijderd": len(records)}
+
+
+@app.delete("/api/data/alles")
+def delete_all_data(session: Session = Depends(get_session)):
+    """Verwijder alle data (accounts, historie, schulden, rendement, jaaropgave)."""
+    counts = {}
+    for model, name in [
+        (SaldoHistorie, "saldo_historie"),
+        (Account, "accounts"),
+        (Schuld, "schulden"),
+        (RendementJaren, "rendement_jaren"),
+        (Jaaropgave, "jaaropgave"),
+    ]:
+        records = session.exec(select(model)).all()
+        counts[name] = len(records)
+        for r in records:
+            session.delete(r)
+    session.commit()
+    return counts

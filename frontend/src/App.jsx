@@ -8,6 +8,7 @@ import Verdeling from './pages/Verdeling'
 import Jaaropgave from './pages/Jaaropgave'
 import Vermogensgroei from './pages/Vermogensgroei'
 import Schulden from './pages/Schulden'
+import Instellingen from './pages/Instellingen'
 import { theme } from './theme'
 
 const navItems = [
@@ -19,6 +20,7 @@ const navItems = [
   { path: '/jaaropgave', label: 'Jaaropgave', icon: '◎' },
   { path: '/groei', label: 'Vermogensgroei', icon: '◈' },
   { path: '/schulden', label: 'Schulden', icon: '◐' },
+  { path: '/instellingen', label: 'Instellingen', icon: '⚙' },
 ]
 
 function Sidebar({ open, onClose }) {
@@ -131,6 +133,7 @@ export default function App() {
           <Route path="/jaaropgave" element={<Jaaropgave />} />
           <Route path="/groei" element={<Vermogensgroei />} />
           <Route path="/schulden" element={<Schulden />} />
+          <Route path="/instellingen" element={<Instellingen />} />
         </Routes>
       </Layout>
     </BrowserRouter>
