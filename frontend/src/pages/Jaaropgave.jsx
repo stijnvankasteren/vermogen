@@ -17,7 +17,7 @@ function Toast({ message, type = 'error', onClose }) {
 
 // Box 3 fictief rendement percentages (2024 indicatief)
 const FICTIEF_RENDEMENT = {
-  sparen: 0.0092,
+  bankrekening: 0.0092,
   overig: 0.0660,
 }
 const BELASTING_TARIEF = 0.36

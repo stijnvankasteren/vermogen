@@ -28,10 +28,15 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
-    # Zet inleg van alle spaarrekeningen op 0
     with next(get_session()) as session:
-        spaarrekeningen = session.exec(select(Account).where(Account.type == "sparen")).all()
-        for acc in spaarrekeningen:
+        # Migreer oude "sparen" type naar "bankrekening"
+        oude_sparen = session.exec(select(Account).where(Account.type == "sparen")).all()
+        for acc in oude_sparen:
+            acc.type = "bankrekening"
+            session.add(acc)
+        # Zet inleg van alle bankrekeningen op 0
+        bankrekeningen = session.exec(select(Account).where(Account.type == "bankrekening")).all()
+        for acc in bankrekeningen:
             if acc.inleg != 0:
                 acc.inleg = 0
                 session.add(acc)
@@ -238,7 +243,7 @@ async def import_csv(file: UploadFile = File(...), session: Session = Depends(ge
 
         account = session.exec(select(Account).where(Account.naam == naam)).first()
         if not account:
-            account = Account(naam=naam, type="sparen", saldo=saldo, inleg=inleg, kleur="#c9a84c", bijgewerkt_op=datetime.utcnow())
+            account = Account(naam=naam, type="bankrekening", saldo=saldo, inleg=inleg, kleur="#c9a84c", bijgewerkt_op=datetime.utcnow())
             session.add(account)
             session.flush()
 
@@ -376,7 +381,7 @@ async def import_json(file: UploadFile = File(...), session: Session = Depends(g
             session.add(existing)
         else:
             acc = Account(
-                naam=a["naam"], type=a.get("type", "sparen"),
+                naam=a["naam"], type="bankrekening" if a.get("type") in ("sparen", None) else a.get("type"),
                 saldo=a.get("saldo", 0), inleg=a.get("inleg", 0),
                 kleur=a.get("kleur", "#c9a84c"),
                 bijgewerkt_op=datetime.utcnow(),

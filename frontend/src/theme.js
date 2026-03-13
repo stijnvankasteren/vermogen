@@ -13,10 +13,10 @@ export const theme = {
   fontBody: "'DM Sans', sans-serif",
 }
 
-export const accountTypes = ['sparen', 'beleggen', 'crypto', 'pensioen']
+export const accountTypes = ['bankrekening', 'beleggen', 'crypto', 'pensioen']
 
 export const typeColors = {
-  sparen: '#4ade80',
+  bankrekening: '#4ade80',
   beleggen: '#c9a84c',
   crypto: '#818cf8',
   pensioen: '#38bdf8',

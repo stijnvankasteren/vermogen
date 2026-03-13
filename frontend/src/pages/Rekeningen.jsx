@@ -5,7 +5,7 @@ import { theme, accountTypes, formatEuro, formatDate } from '../theme'
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-16">
-      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: theme.accent, borderTopColor: 'transparent' }} />
+      <div className="w-8 h-8 border-2 border-t-tranbankrekeningt rounded-full animate-spin" style={{ borderColor: theme.accent, borderTopColor: 'tranbankrekeningt' }} />
     </div>
   )
 }
@@ -25,7 +25,7 @@ function Toast({ message, type = 'error', onClose }) {
   )
 }
 
-const emptyForm = { naam: '', type: 'sparen', saldo: '', inleg: '', kleur: '#c9a84c' }
+const emptyForm = { naam: '', type: 'bankrekening', saldo: '', inleg: '', kleur: '#c9a84c' }
 
 export default function Rekeningen() {
   const [accounts, setAccounts] = useState([])
@@ -65,7 +65,7 @@ export default function Rekeningen() {
     e.preventDefault()
     setSaving(true)
     try {
-      const data = { ...form, saldo: parseFloat(form.saldo), inleg: form.type === 'sparen' ? 0 : parseFloat(form.inleg) }
+      const data = { ...form, saldo: parseFloat(form.saldo), inleg: form.type === 'bankrekening' ? 0 : parseFloat(form.inleg) }
       if (editAccount) {
         await updateAccount(editAccount.id, data)
         setToast({ message: 'Rekening bijgewerkt', type: 'success' })
@@ -157,10 +157,10 @@ export default function Rekeningen() {
                     <td className="px-4 py-3 capitalize" style={{ color: theme.textSecondary }}>{acc.type}</td>
                     <td className="px-4 py-3 font-mono" style={{ color: theme.textPrimary }}>{formatEuro(acc.saldo)}</td>
                     <td className="px-4 py-3 font-mono" style={{ color: theme.textSecondary }}>
-                      {acc.type === 'sparen' ? <span style={{ color: theme.textMuted }}>–</span> : formatEuro(acc.inleg)}
+                      {acc.type === 'bankrekening' ? <span style={{ color: theme.textMuted }}>–</span> : formatEuro(acc.inleg)}
                     </td>
                     <td className="px-4 py-3 font-mono" style={{ color: winst >= 0 ? theme.accentGreen : theme.accentRed }}>
-                      {acc.type === 'sparen'
+                      {acc.type === 'bankrekening'
                         ? <span style={{ color: theme.textMuted }}>–</span>
                         : <>{formatEuro(winst)}{' '}<span className="text-xs">({winstPct >= 0 ? '+' : ''}{winstPct.toFixed(2).replace('.', ',')}%)</span></>
                       }
@@ -192,7 +192,7 @@ export default function Rekeningen() {
               {[
                 { label: 'Naam', key: 'naam', type: 'text' },
                 { label: 'Saldo (€)', key: 'saldo', type: 'number' },
-                ...(form.type !== 'sparen' ? [{ label: 'Inleg (€)', key: 'inleg', type: 'number' }] : []),
+                ...(form.type !== 'bankrekening' ? [{ label: 'Inleg (€)', key: 'inleg', type: 'number' }] : []),
               ].map(f => (
                 <div key={f.key}>
                   <label className="block text-xs mb-1" style={{ color: theme.textMuted }}>{f.label}</label>
@@ -211,7 +211,7 @@ export default function Rekeningen() {
                 <label className="block text-xs mb-1" style={{ color: theme.textMuted }}>Type</label>
                 <select
                   value={form.type}
-                  onChange={e => setForm(p => ({ ...p, type: e.target.value, inleg: e.target.value === 'sparen' ? '0' : p.inleg }))}
+                  onChange={e => setForm(p => ({ ...p, type: e.target.value, inleg: e.target.value === 'bankrekening' ? '0' : p.inleg }))}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{ background: 'rgba(20,20,30,0.95)', border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                 >
