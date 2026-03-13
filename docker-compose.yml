@@ -19,6 +19,6 @@ services:
     container_name: vermogen-frontend
     restart: unless-stopped
     ports:
-      - "80:80"
+      - "5001:5001"
     depends_on:
       - backend
