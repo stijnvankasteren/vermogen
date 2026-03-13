@@ -1,6 +1,8 @@
+import csv
+import io
 from datetime import date, datetime
 from typing import List, Optional
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from sqlmodel import Session, select
 from database import create_db_and_tables, get_session
@@ -109,6 +111,64 @@ def get_totaal_historie(session: Session = Depends(get_session)):
         monthly[key] += h.saldo
     result = [{"datum": k, "saldo": v} for k, v in sorted(monthly.items())]
     return result
+
+
+# --- Import ---
+
+@app.post("/api/import")
+async def import_csv(file: UploadFile = File(...), session: Session = Depends(get_session)):
+    """
+    Importeer historische saldo data via CSV.
+    Verwachte kolommen: account_naam, datum (YYYY-MM-DD), saldo
+    Optionele kolom: inleg
+    Onbekende accounts worden automatisch aangemaakt.
+    Duplicaten (zelfde account + datum) worden overgeslagen.
+    """
+    content = await file.read()
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text = content.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    required = {"account_naam", "datum", "saldo"}
+    if not required.issubset(set(reader.fieldnames or [])):
+        raise HTTPException(status_code=400, detail=f"CSV moet kolommen bevatten: {', '.join(required)}")
+
+    ingevoegd = 0
+    overgeslagen = 0
+    fouten = []
+
+    for i, row in enumerate(reader, start=2):
+        try:
+            naam = row["account_naam"].strip()
+            datum = date.fromisoformat(row["datum"].strip())
+            saldo = float(row["saldo"].replace(",", ".").strip())
+            inleg = float(row["inleg"].replace(",", ".").strip()) if "inleg" in row and row["inleg"].strip() else 0.0
+        except Exception as e:
+            fouten.append(f"Rij {i}: {e}")
+            continue
+
+        account = session.exec(select(Account).where(Account.naam == naam)).first()
+        if not account:
+            account = Account(naam=naam, type="sparen", saldo=saldo, inleg=inleg, kleur="#c9a84c", bijgewerkt_op=datetime.utcnow())
+            session.add(account)
+            session.flush()
+
+        existing = session.exec(
+            select(SaldoHistorie)
+            .where(SaldoHistorie.account_id == account.id)
+            .where(SaldoHistorie.datum == datum)
+        ).first()
+        if existing:
+            overgeslagen += 1
+            continue
+
+        session.add(SaldoHistorie(account_id=account.id, datum=datum, saldo=saldo))
+        ingevoegd += 1
+
+    session.commit()
+    return {"ingevoegd": ingevoegd, "overgeslagen": overgeslagen, "fouten": fouten}
 
 
 # --- Rendement ---
