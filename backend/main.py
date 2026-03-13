@@ -237,13 +237,16 @@ async def import_csv(file: UploadFile = File(...), session: Session = Depends(ge
             datum = date.fromisoformat(row["datum"].strip())
             saldo = float(row["saldo"].replace(",", ".").strip())
             inleg = float(row["inleg"].replace(",", ".").strip()) if "inleg" in row and row["inleg"].strip() else 0.0
+            account_type = row["account_type"].strip() if "account_type" in row and row["account_type"].strip() else "bankrekening"
+            if account_type == "sparen":
+                account_type = "bankrekening"
         except Exception as e:
             fouten.append(f"Rij {i}: {e}")
             continue
 
         account = session.exec(select(Account).where(Account.naam == naam)).first()
         if not account:
-            account = Account(naam=naam, type="bankrekening", saldo=saldo, inleg=inleg, kleur="#c9a84c", bijgewerkt_op=datetime.utcnow())
+            account = Account(naam=naam, type=account_type, saldo=saldo, inleg=inleg, kleur="#c9a84c", bijgewerkt_op=datetime.utcnow())
             session.add(account)
             session.flush()
 

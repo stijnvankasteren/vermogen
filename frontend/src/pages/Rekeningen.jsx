@@ -5,7 +5,7 @@ import { theme, accountTypes, formatEuro, formatDate } from '../theme'
 function Spinner() {
   return (
     <div className="flex items-center justify-center py-16">
-      <div className="w-8 h-8 border-2 border-t-tranbankrekeningt rounded-full animate-spin" style={{ borderColor: theme.accent, borderTopColor: 'tranbankrekeningt' }} />
+      <div className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: theme.accent, borderTopColor: 'transparent' }} />
     </div>
   )
 }

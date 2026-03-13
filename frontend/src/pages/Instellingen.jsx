@@ -130,7 +130,7 @@ export default function Instellingen() {
 
   // Download CSV template
   const handleCsvTemplate = () => {
-    const inhoud = 'account_naam,datum,saldo,inleg\nSpaarrekening,2024-01-01,10000,\nBeleggingen,2024-01-01,5000,4000\n'
+    const inhoud = 'account_naam,account_type,datum,saldo,inleg\nSpaarrekening,bankrekening,2024-01-01,10000,\nBeleggingen,beleggen,2024-01-01,5000,4000\nCrypto,crypto,2024-01-01,2000,1500\n'
     const blob = new Blob([inhoud], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
