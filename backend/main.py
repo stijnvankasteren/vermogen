@@ -1,0 +1,171 @@
+from datetime import date, datetime
+from typing import List, Optional
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from sqlmodel import Session, select
+from database import create_db_and_tables, get_session
+from models import (
+    Account, AccountCreate, AccountUpdate,
+    SaldoHistorie, SaldoHistorieCreate,
+    RendementJaren, RendementCreate,
+    Jaaropgave, JaaropgaveCreate,
+)
+
+app = FastAPI(title="Vermogensdashboard API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.on_event("startup")
+def on_startup():
+    create_db_and_tables()
+
+
+# --- Accounts ---
+
+@app.get("/api/accounts", response_model=List[Account])
+def get_accounts(session: Session = Depends(get_session)):
+    return session.exec(select(Account)).all()
+
+
+@app.post("/api/accounts", response_model=Account)
+def create_account(account: AccountCreate, session: Session = Depends(get_session)):
+    db_account = Account(**account.model_dump(), bijgewerkt_op=datetime.utcnow())
+    session.add(db_account)
+    session.commit()
+    session.refresh(db_account)
+    return db_account
+
+
+@app.put("/api/accounts/{account_id}", response_model=Account)
+def update_account(account_id: int, account: AccountUpdate, session: Session = Depends(get_session)):
+    db_account = session.get(Account, account_id)
+    if not db_account:
+        raise HTTPException(status_code=404, detail="Account niet gevonden")
+    update_data = account.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_account, key, value)
+    db_account.bijgewerkt_op = datetime.utcnow()
+    session.add(db_account)
+    session.commit()
+    session.refresh(db_account)
+    return db_account
+
+
+@app.delete("/api/accounts/{account_id}")
+def delete_account(account_id: int, session: Session = Depends(get_session)):
+    db_account = session.get(Account, account_id)
+    if not db_account:
+        raise HTTPException(status_code=404, detail="Account niet gevonden")
+    # Delete related history
+    histories = session.exec(select(SaldoHistorie).where(SaldoHistorie.account_id == account_id)).all()
+    for h in histories:
+        session.delete(h)
+    session.delete(db_account)
+    session.commit()
+    return {"ok": True}
+
+
+# --- Saldo Historie ---
+
+@app.get("/api/accounts/{account_id}/historie", response_model=List[SaldoHistorie])
+def get_historie(account_id: int, session: Session = Depends(get_session)):
+    account = session.get(Account, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account niet gevonden")
+    return session.exec(
+        select(SaldoHistorie)
+        .where(SaldoHistorie.account_id == account_id)
+        .order_by(SaldoHistorie.datum)
+    ).all()
+
+
+@app.post("/api/accounts/{account_id}/historie", response_model=SaldoHistorie)
+def add_historie(account_id: int, historie: SaldoHistorieCreate, session: Session = Depends(get_session)):
+    account = session.get(Account, account_id)
+    if not account:
+        raise HTTPException(status_code=404, detail="Account niet gevonden")
+    db_historie = SaldoHistorie(account_id=account_id, **historie.model_dump())
+    session.add(db_historie)
+    session.commit()
+    session.refresh(db_historie)
+    return db_historie
+
+
+@app.get("/api/historie/totaal")
+def get_totaal_historie(session: Session = Depends(get_session)):
+    histories = session.exec(select(SaldoHistorie).order_by(SaldoHistorie.datum)).all()
+    # Group by month
+    from collections import defaultdict
+    monthly = defaultdict(float)
+    for h in histories:
+        key = h.datum.strftime("%Y-%m")
+        monthly[key] += h.saldo
+    result = [{"datum": k, "saldo": v} for k, v in sorted(monthly.items())]
+    return result
+
+
+# --- Rendement ---
+
+@app.get("/api/rendement", response_model=List[RendementJaren])
+def get_rendement(session: Session = Depends(get_session)):
+    return session.exec(select(RendementJaren).order_by(RendementJaren.jaar)).all()
+
+
+@app.post("/api/rendement", response_model=RendementJaren)
+def upsert_rendement(rendement: RendementCreate, session: Session = Depends(get_session)):
+    existing = session.exec(
+        select(RendementJaren).where(RendementJaren.jaar == rendement.jaar)
+    ).first()
+    if existing:
+        for key, value in rendement.model_dump().items():
+            setattr(existing, key, value)
+        session.add(existing)
+        session.commit()
+        session.refresh(existing)
+        return existing
+    db_rendement = RendementJaren(**rendement.model_dump())
+    session.add(db_rendement)
+    session.commit()
+    session.refresh(db_rendement)
+    return db_rendement
+
+
+# --- Jaaropgave ---
+
+@app.get("/api/jaaropgave", response_model=List[Jaaropgave])
+def get_jaaropgave(session: Session = Depends(get_session)):
+    return session.exec(select(Jaaropgave).order_by(Jaaropgave.jaar.desc())).all()
+
+
+@app.get("/api/jaaropgave/{jaar}", response_model=Jaaropgave)
+def get_jaaropgave_jaar(jaar: int, session: Session = Depends(get_session)):
+    result = session.exec(select(Jaaropgave).where(Jaaropgave.jaar == jaar)).first()
+    if not result:
+        raise HTTPException(status_code=404, detail="Jaaropgave niet gevonden")
+    return result
+
+
+@app.post("/api/jaaropgave", response_model=Jaaropgave)
+def upsert_jaaropgave(opgave: JaaropgaveCreate, session: Session = Depends(get_session)):
+    existing = session.exec(
+        select(Jaaropgave).where(Jaaropgave.jaar == opgave.jaar)
+    ).first()
+    if existing:
+        for key, value in opgave.model_dump().items():
+            setattr(existing, key, value)
+        session.add(existing)
+        session.commit()
+        session.refresh(existing)
+        return existing
+    db_opgave = Jaaropgave(**opgave.model_dump())
+    session.add(db_opgave)
+    session.commit()
+    session.refresh(db_opgave)
+    return db_opgave
