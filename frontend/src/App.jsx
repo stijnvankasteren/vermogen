@@ -6,6 +6,7 @@ import ToekomstigVermogen from './pages/ToekomstigVermogen'
 import Rendement from './pages/Rendement'
 import Verdeling from './pages/Verdeling'
 import Jaaropgave from './pages/Jaaropgave'
+import Vermogensgroei from './pages/Vermogensgroei'
 import { theme } from './theme'
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
   { path: '/rendement', label: 'Rendement', icon: '◆' },
   { path: '/verdeling', label: 'Verdeling', icon: '◑' },
   { path: '/jaaropgave', label: 'Jaaropgave', icon: '◎' },
+  { path: '/groei', label: 'Vermogensgroei', icon: '◈' },
 ]
 
 function Sidebar({ open, onClose }) {
@@ -125,6 +127,7 @@ export default function App() {
           <Route path="/rendement" element={<Rendement />} />
           <Route path="/verdeling" element={<Verdeling />} />
           <Route path="/jaaropgave" element={<Jaaropgave />} />
+          <Route path="/groei" element={<Vermogensgroei />} />
         </Routes>
       </Layout>
     </BrowserRouter>

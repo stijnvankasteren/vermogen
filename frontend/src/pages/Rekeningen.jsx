@@ -235,7 +235,7 @@ export default function Rekeningen() {
                 <label className="block text-xs mb-1" style={{ color: theme.textMuted }}>Type</label>
                 <select
                   value={form.type}
-                  onChange={e => setForm(p => ({ ...p, type: e.target.value }))}
+                  onChange={e => setForm(p => ({ ...p, type: e.target.value, inleg: e.target.value === 'sparen' ? '0' : p.inleg }))}
                   className="w-full px-3 py-2 rounded-lg text-sm outline-none"
                   style={{ background: 'rgba(20,20,30,0.95)', border: `1px solid ${theme.border}`, color: theme.textPrimary }}
                 >

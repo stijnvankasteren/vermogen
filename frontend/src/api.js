@@ -23,6 +23,7 @@ export const deleteAccount = (id) => request(`/accounts/${id}`, { method: 'DELET
 export const getAccountHistorie = (id) => request(`/accounts/${id}/historie`)
 export const addAccountHistorie = (id, data) => request(`/accounts/${id}/historie`, { method: 'POST', body: JSON.stringify(data) })
 export const getTotaalHistorie = () => request('/historie/totaal')
+export const getVermogensgroei = () => request('/vermogensgroei')
 
 // Import
 export const importCsv = (file) => {

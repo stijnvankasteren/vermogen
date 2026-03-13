@@ -113,6 +113,44 @@ def get_totaal_historie(session: Session = Depends(get_session)):
     return result
 
 
+# --- Vermogensgroei ---
+
+@app.get("/api/vermogensgroei")
+def get_vermogensgroei(session: Session = Depends(get_session)):
+    """
+    Geeft per jaar het totale vermogen en het vermogen per account,
+    gebaseerd op de laatste saldo-registratie van dat jaar.
+    """
+    from collections import defaultdict
+    accounts = session.exec(select(Account)).all()
+    histories = session.exec(select(SaldoHistorie).order_by(SaldoHistorie.datum)).all()
+
+    # Per account: laatste saldo per jaar
+    account_jaar_saldo = defaultdict(dict)  # {account_id: {jaar: saldo}}
+    for h in histories:
+        jaar = h.datum.year
+        account_jaar_saldo[h.account_id][jaar] = h.saldo
+
+    # Verzamel alle jaren
+    alle_jaren = sorted({h.datum.year for h in histories})
+
+    resultaat = []
+    for jaar in alle_jaren:
+        entry = {"jaar": jaar, "totaal": 0}
+        for acc in accounts:
+            # Gebruik laatste bekende saldo tot en met dit jaar
+            saldo = 0
+            for j in sorted(account_jaar_saldo[acc.id].keys()):
+                if j <= jaar:
+                    saldo = account_jaar_saldo[acc.id][j]
+            entry[acc.naam] = saldo
+            entry["totaal"] += saldo
+        resultaat.append(entry)
+
+    account_info = [{"naam": acc.naam, "kleur": acc.kleur} for acc in accounts]
+    return {"jaren": resultaat, "accounts": account_info}
+
+
 # --- Import ---
 
 @app.post("/api/import")
