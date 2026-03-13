@@ -41,6 +41,16 @@ class Jaaropgave(SQLModel, table=True):
     heffingsvrij_vermogen: float = 57000.0
 
 
+class Schuld(SQLModel, table=True):
+    __tablename__ = "schulden"
+    id: Optional[int] = Field(default=None, primary_key=True)
+    naam: str
+    type: str  # hypotheek / lening / creditcard / overig
+    bedrag: float
+    kleur: str
+    bijgewerkt_op: datetime = Field(default_factory=datetime.utcnow)
+
+
 # Pydantic schemas
 class AccountCreate(SQLModel):
     naam: str
@@ -76,3 +86,17 @@ class JaaropgaveCreate(SQLModel):
     saldo_eind: float
     inleg: float
     heffingsvrij_vermogen: float = 57000.0
+
+
+class SchuldCreate(SQLModel):
+    naam: str
+    type: str
+    bedrag: float
+    kleur: str
+
+
+class SchuldUpdate(SQLModel):
+    naam: Optional[str] = None
+    type: Optional[str] = None
+    bedrag: Optional[float] = None
+    kleur: Optional[str] = None

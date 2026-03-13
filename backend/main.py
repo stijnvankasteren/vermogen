@@ -11,6 +11,7 @@ from models import (
     SaldoHistorie, SaldoHistorieCreate,
     RendementJaren, RendementCreate,
     Jaaropgave, JaaropgaveCreate,
+    Schuld, SchuldCreate, SchuldUpdate,
 )
 
 app = FastAPI(title="Vermogensdashboard API")
@@ -119,6 +120,46 @@ def get_totaal_historie(session: Session = Depends(get_session)):
         monthly[key] += h.saldo
     result = [{"datum": k, "saldo": v} for k, v in sorted(monthly.items())]
     return result
+
+
+# --- Schulden ---
+
+@app.get("/api/schulden", response_model=List[Schuld])
+def get_schulden(session: Session = Depends(get_session)):
+    return session.exec(select(Schuld)).all()
+
+
+@app.post("/api/schulden", response_model=Schuld)
+def create_schuld(schuld: SchuldCreate, session: Session = Depends(get_session)):
+    db_schuld = Schuld(**schuld.model_dump(), bijgewerkt_op=datetime.utcnow())
+    session.add(db_schuld)
+    session.commit()
+    session.refresh(db_schuld)
+    return db_schuld
+
+
+@app.put("/api/schulden/{schuld_id}", response_model=Schuld)
+def update_schuld(schuld_id: int, schuld: SchuldUpdate, session: Session = Depends(get_session)):
+    db_schuld = session.get(Schuld, schuld_id)
+    if not db_schuld:
+        raise HTTPException(status_code=404, detail="Schuld niet gevonden")
+    for key, value in schuld.model_dump(exclude_unset=True).items():
+        setattr(db_schuld, key, value)
+    db_schuld.bijgewerkt_op = datetime.utcnow()
+    session.add(db_schuld)
+    session.commit()
+    session.refresh(db_schuld)
+    return db_schuld
+
+
+@app.delete("/api/schulden/{schuld_id}")
+def delete_schuld(schuld_id: int, session: Session = Depends(get_session)):
+    db_schuld = session.get(Schuld, schuld_id)
+    if not db_schuld:
+        raise HTTPException(status_code=404, detail="Schuld niet gevonden")
+    session.delete(db_schuld)
+    session.commit()
+    return {"ok": True}
 
 
 # --- Vermogensgroei ---

@@ -3,7 +3,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Cell
 } from 'recharts'
-import { getAccounts, getTotaalHistorie } from '../api'
+import { getAccounts, getTotaalHistorie, getSchulden } from '../api'
 import { theme, formatEuro, formatPct } from '../theme'
 
 function KpiCard({ label, value, sub, color }) {
@@ -26,15 +26,17 @@ function Spinner() {
 
 export default function Overzicht() {
   const [accounts, setAccounts] = useState([])
+  const [schulden, setSchulden] = useState([])
   const [historie, setHistorie] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
-    Promise.all([getAccounts(), getTotaalHistorie()])
-      .then(([acc, hist]) => {
+    Promise.all([getAccounts(), getTotaalHistorie(), getSchulden()])
+      .then(([acc, hist, schuld]) => {
         setAccounts(acc)
         setHistorie(hist)
+        setSchulden(schuld)
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false))
@@ -44,6 +46,8 @@ export default function Overzicht() {
   if (error) return <div className="text-red-400 p-4">Fout: {error}</div>
 
   const totaalSaldo = accounts.reduce((s, a) => s + a.saldo, 0)
+  const totaalSchulden = schulden.reduce((s, d) => s + d.bedrag, 0)
+  const nettoVermogen = totaalSaldo - totaalSchulden
   const totaalInleg = accounts.reduce((s, a) => s + a.inleg, 0)
   const winst = totaalSaldo - totaalInleg
   const winstPct = totaalInleg > 0 ? (winst / totaalInleg) * 100 : 0
@@ -58,11 +62,21 @@ export default function Overzicht() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-sm uppercase tracking-widest mb-1" style={{ color: theme.textMuted }}>Totaal Vermogen</p>
-        <h2 className="text-5xl font-display" style={{ color: theme.accent, fontFamily: theme.fontDisplay }}>
-          {formatEuro(totaalSaldo)}
-        </h2>
+      <div className="flex flex-wrap gap-8 items-end">
+        <div>
+          <p className="text-sm uppercase tracking-widest mb-1" style={{ color: theme.textMuted }}>Bruto Vermogen</p>
+          <h2 className="text-5xl font-display" style={{ color: theme.accent, fontFamily: theme.fontDisplay }}>
+            {formatEuro(totaalSaldo)}
+          </h2>
+        </div>
+        {totaalSchulden > 0 && (
+          <div>
+            <p className="text-sm uppercase tracking-widest mb-1" style={{ color: theme.textMuted }}>Netto Vermogen</p>
+            <h2 className="text-4xl font-display" style={{ color: nettoVermogen >= 0 ? theme.accentGreen : theme.accentRed, fontFamily: theme.fontDisplay }}>
+              {formatEuro(nettoVermogen)}
+            </h2>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -73,7 +87,10 @@ export default function Overzicht() {
           sub={formatPct(winstPct)}
           color={winst >= 0 ? theme.accentGreen : theme.accentRed}
         />
-        <KpiCard label="Aantal Rekeningen" value={accounts.length} />
+        {totaalSchulden > 0
+          ? <KpiCard label="Totale Schulden" value={formatEuro(totaalSchulden)} color={theme.accentRed} />
+          : <KpiCard label="Aantal Rekeningen" value={accounts.length} />
+        }
       </div>
 
       {chartData.length > 0 && (

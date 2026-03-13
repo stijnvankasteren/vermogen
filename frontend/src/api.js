@@ -39,6 +39,12 @@ export const importCsv = (file) => {
     })
 }
 
+// Schulden
+export const getSchulden = () => request('/schulden')
+export const createSchuld = (data) => request('/schulden', { method: 'POST', body: JSON.stringify(data) })
+export const updateSchuld = (id, data) => request(`/schulden/${id}`, { method: 'PUT', body: JSON.stringify(data) })
+export const deleteSchuld = (id) => request(`/schulden/${id}`, { method: 'DELETE' })
+
 // Rendement
 export const getRendement = () => request('/rendement')
 export const upsertRendement = (data) => request('/rendement', { method: 'POST', body: JSON.stringify(data) })
