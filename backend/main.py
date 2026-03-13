@@ -27,6 +27,14 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup():
     create_db_and_tables()
+    # Zet inleg van alle spaarrekeningen op 0
+    with next(get_session()) as session:
+        spaarrekeningen = session.exec(select(Account).where(Account.type == "sparen")).all()
+        for acc in spaarrekeningen:
+            if acc.inleg != 0:
+                acc.inleg = 0
+                session.add(acc)
+        session.commit()
 
 
 # --- Accounts ---

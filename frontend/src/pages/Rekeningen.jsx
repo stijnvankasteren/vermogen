@@ -184,10 +184,14 @@ export default function Rekeningen() {
                     </td>
                     <td className="px-4 py-3 capitalize" style={{ color: theme.textSecondary }}>{acc.type}</td>
                     <td className="px-4 py-3 font-mono" style={{ color: theme.textPrimary }}>{formatEuro(acc.saldo)}</td>
-                    <td className="px-4 py-3 font-mono" style={{ color: theme.textSecondary }}>{formatEuro(acc.inleg)}</td>
+                    <td className="px-4 py-3 font-mono" style={{ color: theme.textSecondary }}>
+                      {acc.type === 'sparen' ? <span style={{ color: theme.textMuted }}>–</span> : formatEuro(acc.inleg)}
+                    </td>
                     <td className="px-4 py-3 font-mono" style={{ color: winst >= 0 ? theme.accentGreen : theme.accentRed }}>
-                      {formatEuro(winst)}{' '}
-                      <span className="text-xs">({winstPct >= 0 ? '+' : ''}{winstPct.toFixed(2).replace('.', ',')}%)</span>
+                      {acc.type === 'sparen'
+                        ? <span style={{ color: theme.textMuted }}>–</span>
+                        : <>{formatEuro(winst)}{' '}<span className="text-xs">({winstPct >= 0 ? '+' : ''}{winstPct.toFixed(2).replace('.', ',')}%)</span></>
+                      }
                     </td>
                     <td className="px-4 py-3" style={{ color: theme.textMuted }}>{formatDate(acc.bijgewerkt_op)}</td>
                     <td className="px-4 py-3">
