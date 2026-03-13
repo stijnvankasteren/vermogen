@@ -58,3 +58,29 @@ export const upsertJaaropgave = (data) => request('/jaaropgave', { method: 'POST
 export const exportData = () => fetch('/api/export').then(r => r.json())
 export const deleteHistorie = () => request('/data/historie', { method: 'DELETE' })
 export const deleteAlles = () => request('/data/alles', { method: 'DELETE' })
+
+export const importJson = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return fetch('/api/import/json', { method: 'POST', body: form })
+    .then(async res => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Import fout')
+      }
+      return res.json()
+    })
+}
+
+export const importCsvHistorie = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return fetch('/api/import', { method: 'POST', body: form })
+    .then(async res => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: res.statusText }))
+        throw new Error(err.detail || 'Import fout')
+      }
+      return res.json()
+    })
+}

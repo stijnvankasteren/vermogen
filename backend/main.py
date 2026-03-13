@@ -347,6 +347,104 @@ def delete_all_historie(session: Session = Depends(get_session)):
     return {"verwijderd": len(records)}
 
 
+@app.post("/api/import/json")
+async def import_json(file: UploadFile = File(...), session: Session = Depends(get_session)):
+    """
+    Importeer alle data vanuit een eerder geëxporteerd JSON-bestand.
+    Verwachte structuur: { accounts, saldo_historie, schulden, rendement_jaren, jaaropgave }
+    Bestaande records worden overgeslagen op basis van unieke sleutels.
+    """
+    content = await file.read()
+    try:
+        data = __import__('json').loads(content)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Ongeldig JSON-bestand")
+
+    counts = {"accounts": 0, "saldo_historie": 0, "schulden": 0, "rendement_jaren": 0, "jaaropgave": 0}
+    naam_to_id = {}
+
+    # Accounts
+    for a in data.get("accounts", []):
+        existing = session.exec(select(Account).where(Account.naam == a["naam"])).first()
+        if existing:
+            naam_to_id[a["naam"]] = existing.id
+            # update saldo/inleg/kleur/type
+            existing.saldo = a.get("saldo", existing.saldo)
+            existing.inleg = a.get("inleg", existing.inleg)
+            existing.kleur = a.get("kleur", existing.kleur)
+            existing.type = a.get("type", existing.type)
+            session.add(existing)
+        else:
+            acc = Account(
+                naam=a["naam"], type=a.get("type", "sparen"),
+                saldo=a.get("saldo", 0), inleg=a.get("inleg", 0),
+                kleur=a.get("kleur", "#c9a84c"),
+                bijgewerkt_op=datetime.utcnow(),
+            )
+            session.add(acc)
+            session.flush()
+            naam_to_id[a["naam"]] = acc.id
+            counts["accounts"] += 1
+    session.flush()
+
+    # Rebuild naam_to_id from DB (for existing accounts not in export)
+    all_accounts = session.exec(select(Account)).all()
+    db_id_to_naam = {acc.id: acc.naam for acc in all_accounts}
+    # Also map old export IDs: build old_id -> naam from export
+    old_id_to_naam = {a["id"]: a["naam"] for a in data.get("accounts", []) if "id" in a}
+
+    # Saldo historie
+    for h in data.get("saldo_historie", []):
+        acc_naam = old_id_to_naam.get(h.get("account_id"))
+        if not acc_naam or acc_naam not in naam_to_id:
+            continue
+        real_account_id = naam_to_id[acc_naam]
+        datum = date.fromisoformat(h["datum"]) if isinstance(h["datum"], str) else h["datum"]
+        existing = session.exec(
+            select(SaldoHistorie)
+            .where(SaldoHistorie.account_id == real_account_id)
+            .where(SaldoHistorie.datum == datum)
+        ).first()
+        if not existing:
+            session.add(SaldoHistorie(account_id=real_account_id, datum=datum, saldo=h["saldo"]))
+            counts["saldo_historie"] += 1
+
+    # Schulden
+    for s in data.get("schulden", []):
+        existing = session.exec(select(Schuld).where(Schuld.naam == s["naam"])).first()
+        if not existing:
+            session.add(Schuld(
+                naam=s["naam"], type=s.get("type", "overig"),
+                bedrag=s.get("bedrag", 0), kleur=s.get("kleur", "#f87171"),
+                bijgewerkt_op=datetime.utcnow(),
+            ))
+            counts["schulden"] += 1
+
+    # Rendement jaren
+    for r in data.get("rendement_jaren", []):
+        existing = session.exec(select(RendementJaren).where(RendementJaren.jaar == r["jaar"])).first()
+        if not existing:
+            session.add(RendementJaren(
+                jaar=r["jaar"], rendement_pct=r.get("rendement_pct"),
+                rendement_abs=r.get("rendement_abs"), benchmark_pct=r.get("benchmark_pct"),
+            ))
+            counts["rendement_jaren"] += 1
+
+    # Jaaropgave
+    for j in data.get("jaaropgave", []):
+        existing = session.exec(select(Jaaropgave).where(Jaaropgave.jaar == j["jaar"])).first()
+        if not existing:
+            session.add(Jaaropgave(
+                jaar=j["jaar"], saldo_begin=j.get("saldo_begin", 0),
+                saldo_eind=j.get("saldo_eind", 0), inleg=j.get("inleg", 0),
+                heffingsvrij_vermogen=j.get("heffingsvrij_vermogen", 57000.0),
+            ))
+            counts["jaaropgave"] += 1
+
+    session.commit()
+    return counts
+
+
 @app.delete("/api/data/alles")
 def delete_all_data(session: Session = Depends(get_session)):
     """Verwijder alle data (accounts, historie, schulden, rendement, jaaropgave)."""

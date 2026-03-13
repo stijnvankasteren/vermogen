@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { getAccounts, createAccount, updateAccount, deleteAccount, addAccountHistorie, importCsv } from '../api'
+import { getAccounts, createAccount, updateAccount, deleteAccount, addAccountHistorie } from '../api'
 import { theme, accountTypes, formatEuro, formatDate } from '../theme'
 
 function Spinner() {
@@ -38,7 +38,6 @@ export default function Rekeningen() {
   const [saldoModal, setSaldoModal] = useState(null)
   const [nieuwSaldo, setNieuwSaldo] = useState('')
   const [saving, setSaving] = useState(false)
-  const [importing, setImporting] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -94,35 +93,6 @@ export default function Rekeningen() {
     }
   }
 
-  const downloadTemplate = () => {
-    const inhoud = 'account_naam,datum,saldo,inleg\nSpaarrekening,2024-01-01,10000,\nBeleggingen,2024-01-01,5000,4000\n'
-    const blob = new Blob([inhoud], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'import_template.csv'
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const handleImport = async (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setImporting(true)
-    try {
-      const result = await importCsv(file)
-      const msgs = [`${result.ingevoegd} rijen ingevoegd`, `${result.overgeslagen} overgeslagen`]
-      if (result.fouten.length > 0) msgs.push(`${result.fouten.length} fouten`)
-      setToast({ message: msgs.join(', '), type: result.fouten.length ? 'error' : 'success' })
-      load()
-    } catch (e) {
-      setToast({ message: e.message, type: 'error' })
-    } finally {
-      setImporting(false)
-      e.target.value = ''
-    }
-  }
-
   const handleSaldoUpdate = async () => {
     if (!nieuwSaldo) return
     setSaving(true)
@@ -150,29 +120,13 @@ export default function Rekeningen() {
 
       <div className="flex items-center justify-between">
         <h2 className="text-3xl font-display" style={{ color: theme.textPrimary, fontFamily: theme.fontDisplay }}>Rekeningen</h2>
-        <div className="flex gap-2">
-          <button
-            onClick={downloadTemplate}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition"
-            style={{ background: 'rgba(255,255,255,0.06)', color: theme.textMuted, border: `1px solid ${theme.border}` }}
-          >
-            Template
-          </button>
-          <label
-            className="px-4 py-2 rounded-xl text-sm font-medium transition cursor-pointer"
-            style={{ background: 'rgba(255,255,255,0.08)', color: theme.textSecondary, border: `1px solid ${theme.border}` }}
-          >
-            {importing ? 'Importeren...' : 'CSV importeren'}
-            <input type="file" accept=".csv" className="hidden" onChange={handleImport} disabled={importing} />
-          </label>
-          <button
-            onClick={openNew}
-            className="px-4 py-2 rounded-xl text-sm font-medium transition"
-            style={{ background: theme.accent, color: '#0f1117' }}
-          >
-            + Rekening toevoegen
-          </button>
-        </div>
+        <button
+          onClick={openNew}
+          className="px-4 py-2 rounded-xl text-sm font-medium transition"
+          style={{ background: theme.accent, color: '#0f1117' }}
+        >
+          + Rekening toevoegen
+        </button>
       </div>
 
       {accounts.length === 0 ? (
